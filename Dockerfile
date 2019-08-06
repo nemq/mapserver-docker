@@ -34,8 +34,8 @@ RUN cmake \
 -DWITH_POSTGIS=OFF \
 -DWITH_GDAL=ON \
 -DWITH_OGR=ON \
--DWITH_CLIENT_WMS=OFF \
--DWITH_CLIENT_WFS=OFF \
+-DWITH_CLIENT_WMS=ON \
+-DWITH_CLIENT_WFS=ON \
 -DWITH_CURL=OFF \
 -DWITH_WFS=ON \
 -DWITH_WCS=ON \
@@ -63,24 +63,30 @@ FROM ubuntu:18.04
 #Install MapServer dependencies.
 RUN apt-get update -y && \
 apt-get install -y --fix-missing --no-install-recommends libfreetype6 libjpeg8 libxml2 libproj12 libgdal20
+RUN ldconfig
 
-#Copy build artifacts (TODO: probably only bin is nedded)
+#Copy build artifacts
 COPY --from=builder  /build/install/bin/ /usr/local/bin/
 COPY --from=builder  /build/install/lib/ /usr/local/lib/
 COPY --from=builder  /build/install/include/ /usr/local/include/
-COPY --from=builder  /build/install/share/ /usr/local/share
+COPY --from=builder  /build/install/share/ /usr/local/share/
 
 
-#TODO clean this mess.
-RUN apt-get install -y --fix-missing --no-install-recommends apache2
-RUN ldconfig
+#Install Apache
+RUN apt-get install -y --fix-missing --no-install-recommends apache2 
+#   ^^^^ libapache2-mod-fcgid
+#RUN a2enmod fcgid
 RUN a2enmod cgid
+
+#Configure Apache
 RUN ln -s /usr/local/bin/mapserv /usr/lib/cgi-bin/mapserv
 RUN chmod o+x /usr/local/bin/mapserv
 RUN chmod 755 /usr/lib/cgi-bin
 EXPOSE  80
-ENV HOST_IP `ifconfig | grep inet | grep Mask:255.255.255.0 | cut -d ' ' -f 12 | cut -d ':' -f 2`
-RUN apache2ctl start
+
+WORKDIR /data
+VOLUME ["/data"]
+
 CMD apache2ctl -D FOREGROUND
 
 

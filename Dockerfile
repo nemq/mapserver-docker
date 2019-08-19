@@ -79,14 +79,23 @@ RUN apt-get install -y --fix-missing --no-install-recommends apache2
 RUN a2enmod cgid
 
 #Configure Apache
-RUN ln -s /usr/local/bin/mapserv /usr/lib/cgi-bin/mapserv
+
 RUN chmod o+x /usr/local/bin/mapserv
+RUN ln -s /usr/local/bin/mapserv /usr/lib/cgi-bin/mapserv
 RUN chmod 755 /usr/lib/cgi-bin
+
+COPY srv.conf /etc/apache2/conf-available/srv.conf
+RUN a2enconf srv
+
+COPY 001-mapserver.conf /etc/apache2/sites-available/001-mapserver.conf
+RUN a2dissite 000-default
+RUN a2ensite 001-mapserver
+
+WORKDIR /srv
+RUN mkdir /srv/tmp
+VOLUME ["/srv"]
+
 EXPOSE  80
-
-WORKDIR /data
-VOLUME ["/data"]
-
 CMD apache2ctl -D FOREGROUND
 
 
